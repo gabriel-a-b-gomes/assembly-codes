@@ -16,7 +16,7 @@ main:
     la a2, quatro
     la a3, oito
     la a4, sete
-    call anda_com_numero
+    call anda_com_numero # Funcao que anda com os numeros na tela
 
     lw ra, 0(sp)
     addi sp, sp, 4
@@ -59,7 +59,7 @@ anda_com_numero:
     lw t0, 0(sp)
     addi sp, sp, 4
     mv a1, t0
-    call adiciona_numero
+    call adiciona_numero # adiciona o numero com endereco em a1 na tela
 
     li t5, 0
     mv t6, zero
@@ -70,8 +70,8 @@ for_anda_numero:
     beq t6, s7, fim_for_anda_numero
     mv a0, s0
     mv a1, t6
-    call mostra_numero
-    li a0, 200
+    call mostra_numero # mostra o numero na visualizacao deslocando t6 para esquerda
+    li a0, 500
     call pausa
     addi t6, t6, 1
 
@@ -81,7 +81,7 @@ for_anda_numero:
     lw t0, 0(sp)
     addi sp, sp, 4
     mv a1, t0
-    call adiciona_numero
+    call adiciona_numero # adiciona o numero com endereco em a1 na tela
     mv t6, zero
     addi t5, t5, 1
     j for_anda_numero
@@ -97,7 +97,7 @@ fim_for_anda_numero:
     lw s6, 28(sp)
     lw s7, 32(sp)
     lw s8, 36(sp)
-    addi sp, sp, 32
+    addi sp, sp, 40
     ret
 
 mostra_numero:
@@ -115,7 +115,7 @@ for_mostra_numero:
     li a0, 0x110
     mv a1, t0
     lw t2, 0(s0)
-    sll t3, t2, t1
+    sll t3, t2, t1 # desloca o numero da tela para a esquerda
     mv a2, t3
     ecall
 
@@ -136,8 +136,8 @@ for_adiciona_numero:
     beq t2, zero, fim_adiciona_numero
     lw t3, 0(t0)
     lw t4, 0(t1)
-    slli t3, t3, 5
-    add t3, t3, t4
+    slli t3, t3, 5 # desloca 5 bits para a esquerda
+    add t3, t3, t4 # recebe o novo numero nos 4 primeiros bits
     sw t3, 0(t0)
     addi t0, t0, 4
     addi t1, t1, 4
