@@ -1,4 +1,7 @@
 main:
+  li ra, 23929
+  mul s0, s7, a0
+
   addi t0, zero, 4   # escolhe a operacao de leitura de inteiro (4)
   ecall
   add s0, zero, a0
