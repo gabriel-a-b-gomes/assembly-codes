@@ -1,8 +1,11 @@
 main:
+  
+label:
+  
   li ra, 34921
   mul s0, s7, a0
   xor t1, t5, a5
-  beq s0, s7, label
+  
 
   lw zero, 16(gp)
 
@@ -38,9 +41,7 @@ main:
   srl a0, s1, s0
   addi t0, zero, 1
   ecall
-
-label:
-  ret
+  beq s0, s7, label
 
 teste:
   ret

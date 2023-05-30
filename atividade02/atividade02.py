@@ -135,8 +135,22 @@ def getFillBin(bin, maxSize):
     return bin
 
 
+def isValidImm(value):
+    try:
+        num = int(value)
+        return num
+    except ValueError:
+        raise ValueError("Sintáxe inválida")
+
+
+def hasAllNecessaryValues(registers, need):
+    if not (len(registers) == need):
+        raise ValueError("Sintáxe Inválida")
+
+
 def getImmToBin(num, maxbits, getOtherSide = False):
-    convertNum = int(num)
+    # Verica se o numero de entrada é um numero mesmo e converte para int
+    convertNum = isValidImm(num)
 
     if (convertNum < 0):
         convertNum *= -1
@@ -157,8 +171,18 @@ def getImmToBin(num, maxbits, getOtherSide = False):
     return bin
 
 
+def getDeltaToBranch(number):
+    value = isValidImm(number)
+
+    delta = value - 1000
+
+    return f"{delta}"
+
+
 def addi(instruction, expression):
     register = expression.split(',')
+
+    hasAllNecessaryValues(register, 3)
 
     imm = getImmToBin(register[len(register) - 1].strip(), 12)
 
@@ -172,6 +196,8 @@ def addi(instruction, expression):
 def slli(instruction, expression):
     register = expression.split(',')
 
+    hasAllNecessaryValues(register, 3)
+
     shamt = getImmToBin(register[len(register) - 1], 5)
 
     return (instruction["f7"] + shamt + 
@@ -184,6 +210,8 @@ def slli(instruction, expression):
 def executeR(instruction, expression):
     register = expression.split(',')
 
+    hasAllNecessaryValues(register, 3)
+
     return (instruction["f7"] + 
                 getRegister(register[2].strip()) + 
                 getRegister(register[1].strip()) + 
@@ -194,6 +222,8 @@ def executeR(instruction, expression):
 
 def jalr(instruction, expression):
     register = expression.split(',')
+
+    hasAllNecessaryValues(register, 3)
 
     imm = getImmToBin(register[len(register) - 1].strip(), 12)
 
@@ -207,7 +237,11 @@ def jalr(instruction, expression):
 def lw(instruction, expression):
     register = expression.split(',')
 
+    hasAllNecessaryValues(register, 2)
+
     imm_rs1 = register[1].strip().split("(")
+
+    hasAllNecessaryValues(imm_rs1, 2)
 
     imm = getImmToBin(imm_rs1[0].strip(), 12)
 
@@ -222,7 +256,11 @@ def lw(instruction, expression):
 def sw(instruction, expression):
     register = expression.split(',')
 
+    hasAllNecessaryValues(register, 2)
+
     imm_rs2 = register[1].strip().split("(")
+
+    hasAllNecessaryValues(imm_rs2, 2)
 
     imm = getImmToBin(imm_rs2[0].strip(), 12)
 
@@ -237,7 +275,11 @@ def sw(instruction, expression):
 def beq(instruction, expression):
     register = expression.split(',')
 
-    imm = getImmToBin(register[len(register) - 1].strip(), 13)
+    hasAllNecessaryValues(register, 3)
+
+    j = getDeltaToBranch(register[len(register) - 1].strip())
+
+    imm = getImmToBin(j, 13)
 
     return (imm[0] + imm[2:8] + 
                 getRegister(register[1].strip()) + 
@@ -249,6 +291,8 @@ def beq(instruction, expression):
 def executeL(instruction, expression):
 
     register = expression.split(',')
+
+    hasAllNecessaryValues(register, 2)
 
     imm = getImmToBin(register[len(register) - 1].strip(), 20, True)
 
@@ -315,8 +359,10 @@ def getBinsCode(instruction, expression):
         elif instruction["f3"] == "001": # call
 
             binsCode.append(executeL(functions["auipc"], "t1, 0"))
+
+            j = getDeltaToBranch(expression)
             
-            binsCode.append(jalr(functions["jalr"], f"ra, t1, {expression}"))
+            binsCode.append(jalr(functions["jalr"], f"ra, t1, {j}"))
 
     elif instruction["opcode"] == "0000011": # lw
 
@@ -329,25 +375,32 @@ def getBinsCode(instruction, expression):
     return binsCode
 
 def main():
-    inp = input("(Press exit para sair) Digite a função em assembly que deseja codificar: \n>>> ")
+    inp = input()
     while inp != "exit":
         try:
-            instruction = getFunction(inp.split(" ", 1)[0])
+            c = inp.split(" ", 1)[0]
+
+            instruction = getFunction(c)
             expression = ""
-        
-            if len(inp.split(" ", 1)) > 1:
+
+            if c == "ret" and len(inp.split(" ", 1)) > 1:
+                raise ValueError("Sintáxe inválida")
+
+            if len(inp.split(" ", 1)) == 2:
                 expression = inp.split(" ", 1)[1]
+            elif not (c == "ret"):
+                raise ValueError("Sintáxe inválida")
 
             binsCode = getBinsCode(instruction, expression)
         
             for bin in binsCode:
-                print("> " + convertBinToHex(bin))
+                print(convertBinToHex(bin))
 
             print()
         except ValueError as e:
-            print(e)
+            print(f"Erro: {e}\n")
 
-        inp = input("(Press exit para sair) Digite a função em assembly que deseja codificar: \n>>> ")
+        inp = input()
 
 main()
 
