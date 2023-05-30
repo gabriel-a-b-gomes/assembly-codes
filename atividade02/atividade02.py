@@ -72,10 +72,16 @@ hex = {
 }
 
 def getFunction(instruction):
+    if (instruction not in functions.keys()):
+        raise ValueError("Instrução inválida")
     return functions[instruction]
 
+
 def getRegister(reg):
+    if (reg not in regs.keys()):
+        raise ValueError("Possui um registrador inválido")
     return regs[reg]
+
 
 def convertBinToHex(bin):
     convertedHex = ""
@@ -83,6 +89,7 @@ def convertBinToHex(bin):
         convertedHex += hex[bin[i:i+4]]
 
     return "0x" + convertedHex
+
 
 def convertNumToBin(num):
     bin = ""
@@ -92,6 +99,17 @@ def convertNumToBin(num):
         decimal = decimal // 2
     
     return bin
+
+
+def convertBinToNum(bin):
+    num = 0
+    k = 0
+    for i in range(len(bin) - 1, -1, -1):
+        if bin[i] == "1":
+            num += 2 ** k
+        k += 1
+    return num
+
 
 def convertToNegBase2(bin):
     newBin = ""
@@ -110,10 +128,12 @@ def convertToNegBase2(bin):
             achou = True
     return newBin
 
+
 def getFillBin(bin, maxSize):
     while len(bin) < maxSize:
         bin = "0" + bin
     return bin
+
 
 def getImmToBin(num, maxbits, getOtherSide = False):
     convertNum = int(num)
@@ -136,31 +156,53 @@ def getImmToBin(num, maxbits, getOtherSide = False):
 
     return bin
 
+
 def addi(instruction, expression):
     register = expression.split(',')
 
     imm = getImmToBin(register[len(register) - 1].strip(), 12)
 
-    return imm + getRegister(register[1].strip()) + instruction["f3"] + getRegister(register[0].strip()) + instruction["opcode"]
+    return (imm + 
+                getRegister(register[1].strip()) + 
+                instruction["f3"] + 
+                getRegister(register[0].strip()) + 
+                instruction["opcode"])
+
 
 def slli(instruction, expression):
     register = expression.split(',')
 
     shamt = getImmToBin(register[len(register) - 1], 5)
 
-    return instruction["f7"] + shamt + getRegister(register[1].strip()) + instruction["f3"] + getRegister(register[0].strip()) + instruction["opcode"]
+    return (instruction["f7"] + shamt + 
+                getRegister(register[1].strip()) + 
+                instruction["f3"] + 
+                getRegister(register[0].strip()) + 
+                instruction["opcode"])
+
 
 def executeR(instruction, expression):
     register = expression.split(',')
 
-    return instruction["f7"] + getRegister(register[2].strip()) + getRegister(register[1].strip()) + instruction["f3"] + getRegister(register[0].strip()) + instruction["opcode"]
+    return (instruction["f7"] + 
+                getRegister(register[2].strip()) + 
+                getRegister(register[1].strip()) + 
+                instruction["f3"] + 
+                getRegister(register[0].strip()) + 
+                instruction["opcode"])
+
 
 def jalr(instruction, expression):
     register = expression.split(',')
 
     imm = getImmToBin(register[len(register) - 1].strip(), 12)
 
-    return imm + getRegister(register[1].strip()) + instruction["f3"] + getRegister(register[0].strip()) + instruction["opcode"]
+    return (imm + 
+                getRegister(register[1].strip()) + 
+                instruction["f3"] + 
+                getRegister(register[0].strip()) + 
+                instruction["opcode"])
+
 
 def lw(instruction, expression):
     register = expression.split(',')
@@ -171,7 +213,11 @@ def lw(instruction, expression):
 
     rs1 = imm_rs1[1].split(")")[0].strip()
 
-    return imm + getRegister(rs1) + instruction["f3"] + getRegister(register[0].strip()) + instruction["opcode"]
+    return (imm + 
+                getRegister(rs1) + instruction["f3"] + 
+                getRegister(register[0].strip()) + 
+                instruction["opcode"])
+
 
 def sw(instruction, expression):
     register = expression.split(',')
@@ -182,68 +228,126 @@ def sw(instruction, expression):
 
     rs1 = imm_rs2[1].split(")")[0].strip()
 
-    return imm[0:7] + getRegister(register[0].strip()) + getRegister(rs1) + instruction["f3"] + imm[-5:] + instruction["opcode"]
+    return (imm[0:7] + 
+                getRegister(register[0].strip()) + 
+                getRegister(rs1) + instruction["f3"] + imm[-5:] + 
+                instruction["opcode"])
+
 
 def beq(instruction, expression):
     register = expression.split(',')
 
     imm = getImmToBin(register[len(register) - 1].strip(), 13)
 
-    return imm[0] + imm[2:8] + getRegister(register[1].strip()) + getRegister(register[0].strip()) + instruction["f3"] + imm[-5:-1] + imm[1] + instruction["opcode"]
+    return (imm[0] + imm[2:8] + 
+                getRegister(register[1].strip()) + 
+                getRegister(register[0].strip()) + 
+                instruction["f3"] + imm[-5:-1] + imm[1] + 
+                instruction["opcode"])
+
 
 def executeL(instruction, expression):
+
     register = expression.split(',')
 
     imm = getImmToBin(register[len(register) - 1].strip(), 20, True)
 
     return imm[:20] + getRegister(register[0].strip()) + instruction["opcode"]
 
+
+def getBinsCode(instruction, expression):
+    binsCode = []
+
+    if instruction["opcode"] == "0110011": # Tipo R (mul e xor)
+
+        binsCode.append(executeR(instruction, expression))
+
+    elif instruction["opcode"] == "1100011": # beq
+
+        binsCode.append(beq(instruction, expression))
+
+    elif instruction["opcode"] == "0110111": 
+
+        if instruction["f3"] == "000": # lui
+
+            binsCode.append(executeL(instruction, expression))
+
+        elif instruction["f3"] == "001": # li
+
+            exp = expression.split(',')
+            rs = exp[0].strip()
+            imm = exp[1].strip()
+
+            bin = getImmToBin(imm, 32)
+
+            adjust = 0
+            if bin[20] == "1":
+                adjust = 1
+            
+            num20Bits = convertBinToNum(bin[:20]) + adjust
+
+            if (num20Bits != 0):
+                binsCode.append(executeL(instruction, f"{rs}, {num20Bits}"))
+
+            if (num20Bits == 0): 
+                rs1 = "zero"
+            else:
+                rs1 = rs
+
+            binsCode.append(addi(functions["addi"], f"{rs}, {rs1}, {imm}"))
+
+    elif instruction["opcode"] == "0010011":
+
+        if instruction["f3"] == "000": # addi
+
+            binsCode.append(addi(instruction, expression))
+
+        elif instruction["f3"] == "001": # slli
+
+            binsCode.append(slli(instruction, expression))
+
+    elif instruction["opcode"] == "1100111":
+
+        if instruction["f3"] == "000": # ret
+
+            binsCode.append(jalr(instruction, "zero, ra, 0"))
+
+        elif instruction["f3"] == "001": # call
+
+            binsCode.append(executeL(functions["auipc"], "t1, 0"))
+            
+            binsCode.append(jalr(functions["jalr"], f"ra, t1, {expression}"))
+
+    elif instruction["opcode"] == "0000011": # lw
+
+        binsCode.append(lw(instruction, expression))
+
+    elif instruction["opcode"] == "0100011": #sw
+
+        binsCode.append(sw(instruction, expression))
+
+    return binsCode
+
 def main():
-    inp = input()
+    inp = input("(Press exit para sair) Digite a função em assembly que deseja codificar: \n>>> ")
     while inp != "exit":
-        instrution = getFunction(inp.split(" ", 1)[0])
+        try:
+            instruction = getFunction(inp.split(" ", 1)[0])
+            expression = ""
         
-        if len(inp.split(" ", 1)) > 1:
-            expression = inp.split(" ", 1)[1]
+            if len(inp.split(" ", 1)) > 1:
+                expression = inp.split(" ", 1)[1]
 
-        binCode = ""
+            binsCode = getBinsCode(instruction, expression)
+        
+            for bin in binsCode:
+                print("> " + convertBinToHex(bin))
 
-        if instrution["opcode"] == "0110011": # Tipo R (mul e xor)
-            binCode = executeR(instrution, expression)
-        elif instrution["opcode"] == "1100011": # beq
-            binCode = beq(instrution, expression)
-        elif instrution["opcode"] == "0110111": # lui
-            if instrution["f3"] == "000": # lui
-                binCode = executeL(instrution, expression)
-            elif instrution["f3"] == "001": # li
-                binCode = executeL(instrution, expression)
-                print(convertBinToHex(binCode))
+            print()
+        except ValueError as e:
+            print(e)
 
-                exp = expression.split(',')
-                rs = exp[0].strip()
-                imm = exp[1].strip()
-
-                binCode = addi(functions["addi"], f"{rs}, {rs}, {imm}")
-        elif instrution["opcode"] == "0010011":
-            if instrution["f3"] == "000": # addi
-                binCode = addi(instrution, expression)
-            elif instrution["f3"] == "001": # slli
-                binCode = slli(instrution, expression)
-        elif instrution["opcode"] == "1100111":
-            if instrution["f3"] == "000": # ret
-                binCode = jalr(instrution, "zero, ra, 0")
-            elif instrution["f3"] == "001": # call
-                binCode = executeL(functions["auipc"], "t1, 0")
-                print(convertBinToHex(binCode))
-                binCode = jalr(functions["jalr"], f"ra, t1, {expression}")
-        elif instrution["opcode"] == "0000011": # lw
-            binCode = lw(instrution, expression)
-        elif instrution["opcode"] == "0100011": #sw
-            binCode = sw(instrution, expression)
-
-        print(convertBinToHex(binCode))
-
-        inp = input()
+        inp = input("(Press exit para sair) Digite a função em assembly que deseja codificar: \n>>> ")
 
 main()
 
